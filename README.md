@@ -5,7 +5,7 @@ Installation clé en main d'OpenClaw avec Tailscale, Signal et Ollama (optionnel
 ## Prérequis
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) installé et démarré
-- Un compte [Tailscale](https://tailscale.com) (gratuit)
+- Un compte [Tailscale](https://tailscale.com) (gratuit) avec **HTTPS activé** (admin.tailscale.com → DNS → HTTPS Certificates)
 - Une clé API [Anthropic](https://console.anthropic.com) avec des crédits
 - Un numéro de téléphone dédié pour le bot Signal
 
@@ -29,9 +29,9 @@ chmod +x setup.sh
 ```
 
 Le script vous guidera pas à pas pour configurer :
-- ✅ Tailscale (accès sécurisé via VPN)
+- ✅ Tailscale (accès sécurisé HTTPS via VPN)
 - ✅ Anthropic (modèle IA)
-- ✅ Signal (messagerie)
+- ✅ Signal (messagerie — enregistrement + pairing automatiques)
 - ✅ Brave Search (recherche web, optionnel)
 - ✅ Ollama / Qwen (LLM local, optionnel)
 
@@ -50,22 +50,12 @@ Commandes disponibles :
   ./setup.sh              → Installation complète
   ./setup.sh --help       → Ce menu
   ./setup.sh --status     → État des conteneurs
-  ./setup.sh --signal     → Voir les pairings Signal en attente
+  ./setup.sh --signal     → Pairing Signal interactif
   ./setup.sh --dashboard  → Obtenir l'URL du dashboard
   ./setup.sh --stop       → Arrêter OpenClaw
   ./setup.sh --start      → Démarrer OpenClaw
   ./setup.sh --logs       → Voir les logs en direct
   ./setup.sh --update     → Mettre à jour OpenClaw
-```
-
-## Configuration manuelle
-
-Si vous préférez configurer manuellement :
-
-```bash
-cp .env.example .env
-# Éditez .env avec vos clés
-docker compose up -d
 ```
 
 ## Après l'installation
@@ -78,17 +68,45 @@ docker compose up -d
 
 Ouvrez l'URL affichée dans votre navigateur (format `https://openclaw-gateway.votre-tailnet.ts.net/?token=...`).
 
-### 2. Configurer Signal
+> ⚠️ Le token dans l'URL est obligatoire — sans lui vous verrez "unauthorized".
+
+### 2. Si vous perdez l'accès au dashboard
+
+Cela peut arriver après un redémarrage. Voici la procédure complète :
+
+**Étape 1 — Récupérer l'URL avec token :**
+```bash
+./setup.sh --dashboard
+```
+
+**Étape 2 — Ouvrir l'URL dans votre navigateur**
+
+Vous verrez peut-être "pairing required" — c'est normal, votre navigateur doit être approuvé.
+
+**Étape 3 — Approuver votre device :**
+```bash
+# Lister les devices en attente
+docker compose run --rm openclaw-cli devices list
+
+# Approuver avec l'ID affiché
+docker compose run --rm openclaw-cli devices approve <ID>
+```
+
+**Étape 4 — Rafraîchir la page**
+
+Le dashboard est de nouveau accessible.
+
+> 💡 Tailscale Serve est configuré pour démarrer automatiquement — vous n'avez pas à relancer `tailscale serve` manuellement.
+
+### 3. Configurer Signal
 
 Envoyez un message depuis votre Signal au numéro du bot, puis :
 
 ```bash
 ./setup.sh --signal
-# Notez le code de pairing affiché
-docker compose run --rm --profile cli openclaw-cli pairing approve signal CODE
 ```
 
-### 3. Vérifier que tout fonctionne
+### 4. Vérifier que tout fonctionne
 
 ```bash
 ./setup.sh --status
@@ -98,14 +116,15 @@ docker compose run --rm --profile cli openclaw-cli pairing approve signal CODE
 
 ```
 openclaw-setup/
-├── docker-compose.yml    ← Stack Docker complète
-├── .env.example          ← Template de configuration
-├── .env                  ← Votre configuration (créé par setup.sh)
-├── setup.ps1             ← Script Windows
-├── setup.sh              ← Script Linux/Mac
+├── docker-compose.yml        ← Stack Docker complète
+├── tailscale-serve.json      ← Config Tailscale Serve (HTTPS auto)
+├── .env.example              ← Template de configuration
+├── .env                      ← Votre configuration (créé par setup.sh)
+├── setup.ps1                 ← Script Windows
+├── setup.sh                  ← Script Linux/Mac
 ├── data/
-│   └── .openclaw/        ← Données OpenClaw (config, workspace)
-└── README.md             ← Ce fichier
+│   └── .openclaw/            ← Données OpenClaw (config, workspace)
+└── README.md                 ← Ce fichier
 ```
 
 ## Liens utiles
@@ -117,6 +136,13 @@ openclaw-setup/
 - 🤖 [Modèles Ollama](https://ollama.com/library)
 
 ## Dépannage
+
+**Dashboard inaccessible après redémarrage**
+```bash
+./setup.sh --dashboard   # Récupérer l'URL avec token
+docker compose run --rm openclaw-cli devices list
+docker compose run --rm openclaw-cli devices approve <ID>
+```
 
 **OpenClaw ne démarre pas**
 ```bash
@@ -130,11 +156,11 @@ docker exec openclaw-tailscale-1 tailscale status
 
 **Token OpenClaw invalide**
 ```bash
-docker compose run --rm --profile cli openclaw-cli dashboard --no-open
+docker compose run --rm openclaw-cli dashboard --no-open
 ```
 
 **Signal ne répond pas**
 ```bash
-docker compose run --rm --profile cli openclaw-cli channels status --probe
-docker compose run --rm --profile cli openclaw-cli doctor
+docker compose run --rm openclaw-cli channels status --probe
+docker compose run --rm openclaw-cli doctor
 ```

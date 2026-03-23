@@ -1,6 +1,8 @@
 services:
 
   # ── Tailscale (sidecar) ────────────────────────────────────────
+  # TS_SERVE_CONFIG active Tailscale Serve automatiquement au démarrage
+  # Plus besoin de lancer "tailscale serve --bg 18789" manuellement
   tailscale:
     image: tailscale/tailscale:latest
     hostname: ${TS_HOSTNAME:-openclaw-gateway}
@@ -10,8 +12,10 @@ services:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=true
       - TS_AUTH_ONCE=true
+      - TS_SERVE_CONFIG=/var/lib/tailscale/serve-config.json
     volumes:
       - tailscale-state:/var/lib/tailscale
+      - ./tailscale-serve.json:/var/lib/tailscale/serve-config.json:ro
     cap_add:
       - net_admin
     restart: unless-stopped
@@ -35,6 +39,7 @@ services:
   # ── OpenClaw Gateway ──────────────────────────────────────────
   openclaw-gateway:
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    user: root   # Requis pour que signal-cli soit accessible
     network_mode: service:tailscale
     depends_on:
       - tailscale

@@ -1,0 +1,9 @@
+﻿# Fichier de configuration (contient vos clés API)
+.env
+
+# Données OpenClaw (config, workspace, logs)
+data/
+
+# Système
+.DS_Store
+Thumbs.db
